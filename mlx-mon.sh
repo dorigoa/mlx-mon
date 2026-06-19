@@ -7,38 +7,35 @@ while getopts "i:m:" opt; do
   case $opt in
     i) interval=$OPTARG ;;
     m) metric=$OPTARG ;;
-    *) echo "Uso: $0 [-i secondi] [-m xmit|recv] dev[:porta] [dev[:porta] ...]" >&2
-       echo "  -m xmit  trasmissione (default)" >&2
-       echo "  -m recv  ricezione" >&2; exit 1 ;;
+    *) echo "Uso: $0 [-i secondi] [-m xmit|rcv] dev[:port] [dev[:port] ...]" >&2
+       echo "  -m xmit  transmission (default)" >&2
+       echo "  -m rcv  receive" >&2; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
 
 [[ $# -ge 1 ]] || {
-  echo "Specifica almeno un device. Es: $0 -i 2 -m recv mlx5_1 mlx5_3:1" >&2; exit 1
+  echo "Specify at least one device. E.g.: $0 -i 2 -m rcv mlx5_1 mlx5_3:1" >&2; exit 1
 }
 
-# Validazione metrica
 case "$metric" in
-  xmit|recv) ;;
-  *) echo "Metrica sconosciuta: $metric (usa xmit|recv)" >&2; exit 1 ;;
+  xmit|) ;;
+  *) echo "Unknown metrics: $metric (use xmit|rcv)" >&2; exit 1 ;;
 esac
 
 # Costruzione percorsi e label
 declare -a paths labels
 for t in "$@"; do
   dev=${t%%:*}
-  port=${t#*:}; [[ "$port" == "$t" ]] && port=1   # default porta 1
+  port=${t#*:}; [[ "$port" == "$t" ]] && port=1   # default port 1
   p="/sys/class/infiniband/$dev/ports/$port/counters/port_${metric}_data"
   [[ -r "$p" ]] || { echo "Counter non leggibile: $p" >&2; exit 1; }
   paths+=("$p"); labels+=("$dev:$port")
 done
 
-# Campione iniziale
 declare -a prev
 for i in "${!paths[@]}"; do prev[$i]=$(<"${paths[$i]}"); done
 
-# Header (valori in Gb/s)
 printf '%-10s' "time"
 for l in "${labels[@]}"; do printf ' %14s' "$l"; done; printf '\n'
 printf '%-10s' ""
