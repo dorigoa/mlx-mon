@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+interval=1
+while getopts "i:" opt; do
+  case $opt in
+    i) interval=$OPTARG ;;
+    *) echo "Uso: $0 [-i secondi] dev[:porta] [dev[:porta] ...]" >&2; exit 1 ;;
+  esac
+done
+shift $((OPTIND-1))
+
+[[ $# -ge 1 ]] || {
+  echo "Specifica almeno un device. Es: $0 -i 2 mlx5_1 mlx5_3:1" >&2; exit 1
+}
+
+# Costruzione percorsi e label
+declare -a paths labels
+for t in "$@"; do
+  dev=${t%%:*}
+  port=${t#*:}; [[ "$port" == "$t" ]] && port=1   # default porta 1
+  p="/sys/class/infiniband/$dev/ports/$port/counters/port_xmit_data"
+  [[ -r "$p" ]] || { echo "Counter non leggibile: $p" >&2; exit 1; }
+  paths+=("$p"); labels+=("$dev:$port")
+done
+
+# Campione iniziale
+declare -a prev
+for i in "${!paths[@]}"; do prev[$i]=$(<"${paths[$i]}"); done
+
+# Header (valori in Gb/s)
+printf '%-10s' "time"
+for l in "${labels[@]}"; do printf ' %14s' "$l"; done; printf '\n'
+printf '%-10s' ""
+for _ in "${labels[@]}"; do printf ' %14s' "(Gb/s)"; done; printf '\n'
+
+# Loop
+while sleep "$interval"; do
+  printf '%-10s' "$(date +%T)"
+  for i in "${!paths[@]}"; do
+    cur=$(<"${paths[$i]}")
+    awk -v p="${prev[$i]}" -v c="$cur" -v dt="$interval" \
+        'BEGIN{ printf " %14.3f", (c-p)*4*8/dt/1e9 }'
+    prev[$i]=$cur
+  done
+  printf '\n'
+done
