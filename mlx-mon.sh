@@ -29,7 +29,7 @@ for t in "$@"; do
   dev=${t%%:*}
   port=${t#*:}; [[ "$port" == "$t" ]] && port=1   # default port 1
   p="/sys/class/infiniband/$dev/ports/$port/counters/port_${metric}_data"
-  [[ -r "$p" ]] || { echo "Counter non leggibile: $p" >&2; exit 1; }
+  [[ -r "$p" ]] || { echo "Unreadable counter: $p" >&2; exit 1; }
   paths+=("$p"); labels+=("$dev:$port")
 done
 
