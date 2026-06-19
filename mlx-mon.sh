@@ -2,24 +2,34 @@
 set -euo pipefail
 
 interval=1
-while getopts "i:" opt; do
+metric="xmit"
+while getopts "i:m:" opt; do
   case $opt in
     i) interval=$OPTARG ;;
-    *) echo "Uso: $0 [-i secondi] dev[:porta] [dev[:porta] ...]" >&2; exit 1 ;;
+    m) metric=$OPTARG ;;
+    *) echo "Uso: $0 [-i secondi] [-m xmit|recv] dev[:porta] [dev[:porta] ...]" >&2
+       echo "  -m xmit  trasmissione (default)" >&2
+       echo "  -m recv  ricezione" >&2; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
 
 [[ $# -ge 1 ]] || {
-  echo "Specifica almeno un device. Es: $0 -i 2 mlx5_1 mlx5_3:1" >&2; exit 1
+  echo "Specifica almeno un device. Es: $0 -i 2 -m recv mlx5_1 mlx5_3:1" >&2; exit 1
 }
+
+# Validazione metrica
+case "$metric" in
+  xmit|recv) ;;
+  *) echo "Metrica sconosciuta: $metric (usa xmit|recv)" >&2; exit 1 ;;
+esac
 
 # Costruzione percorsi e label
 declare -a paths labels
 for t in "$@"; do
   dev=${t%%:*}
   port=${t#*:}; [[ "$port" == "$t" ]] && port=1   # default porta 1
-  p="/sys/class/infiniband/$dev/ports/$port/counters/port_xmit_data"
+  p="/sys/class/infiniband/$dev/ports/$port/counters/port_${metric}_data"
   [[ -r "$p" ]] || { echo "Counter non leggibile: $p" >&2; exit 1; }
   paths+=("$p"); labels+=("$dev:$port")
 done
