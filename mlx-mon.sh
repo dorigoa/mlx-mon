@@ -7,7 +7,7 @@ while getopts "i:m:" opt; do
   case $opt in
     i) interval=$OPTARG ;;
     m) metric=$OPTARG ;;
-    *) echo "Uso: $0 [-i secondi] [-m xmit|rcv] dev[:port] [dev[:port] ...]" >&2
+    *) echo "Uso: $0 [-i seconds] [-m xmit|rcv] dev[:port] [dev[:port] ...]" >&2
        echo "  -m xmit  transmission (default)" >&2
        echo "  -m rcv  receive" >&2; exit 1 ;;
   esac
