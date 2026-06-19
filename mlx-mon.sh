@@ -19,7 +19,7 @@ shift $((OPTIND-1))
 }
 
 case "$metric" in
-  xmit|) ;;
+  xmit|rcv) ;;
   *) echo "Unknown metrics: $metric (use xmit|rcv)" >&2; exit 1 ;;
 esac
 
